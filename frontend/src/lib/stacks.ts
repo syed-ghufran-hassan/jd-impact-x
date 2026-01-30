@@ -138,6 +138,69 @@ export async function updateCampaignMetadata(
 }
 
 /**
+ * Fetch campaign donations from contract events
+ */
+export interface DonationEvent {
+  txId: string;
+  donor: string;
+  amount: number;
+  timestamp: number;
+}
+
+export async function fetchCampaignDonations(campaignId: number): Promise<DonationEvent[]> {
+  const apiUrl = ACTIVE_NETWORK === 'testnet'
+    ? 'https://api.testnet.hiro.so'
+    : 'https://api.hiro.so';
+
+  try {
+    const response = await fetch(
+      `${apiUrl}/extended/v1/contract/${CONTRACT_ADDRESS}.${CONTRACT_NAME}/events?limit=50`
+    );
+
+    const data = await response.json();
+    const donations: DonationEvent[] = [];
+
+    if (data.results) {
+      for (const event of data.results) {
+        if (
+          event.event_type === 'smart_contract_log' &&
+          event.contract_log.contract_id === `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`
+        ) {
+          const repr = event.contract_log.value.repr;
+          
+          // Check if it's a donation event and matches campaign ID
+          // Event format: (tuple (amount u1000000) (campaign-id u1) (donor ST...) (event "donation-received") (new-total u1000000))
+          if (
+            repr.includes('(event "donation-received")') && 
+            repr.includes(`(campaign-id u${campaignId})`)
+          ) {
+            // Parse donor and amount from repr string (basic parsing)
+            // Example: ... (amount u1000000) ... (donor ST1...) ...
+            
+            const amountMatch = repr.match(/\(amount u(\d+)\)/);
+            const donorMatch = repr.match(/\(donor (S[A-Z0-9]+)\)/); // Basic principal regex
+
+            if (amountMatch && donorMatch) {
+              donations.push({
+                txId: event.tx_id,
+                donor: donorMatch[1],
+                amount: Number(amountMatch[1]) / 1_000_000,
+                timestamp: Math.floor(new Date(event.block_time || Date.now()).getTime() / 1000), // Use block time or now
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return donations;
+  } catch (error) {
+    console.error('Failed to fetch donations:', error);
+    return [];
+  }
+}
+
+/**
  * Fetch campaign from contract (read-only)
  */
 export async function fetchCampaign(campaignId: number): Promise<CampaignData | null> {
