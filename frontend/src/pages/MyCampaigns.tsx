@@ -17,7 +17,6 @@ import {
 import { useStacksWallet } from '../hooks/useStacksWallet';
 import { ProgressBar } from '../components/ProgressBar';
 import { EditCampaignModal } from '../components/EditCampaignModal';
-import { CampaignCardSkeleton } from '../components/Skeleton';
 import { getCampaignsByOwner, type FullCampaign } from '../lib/campaigns';
 import { claimFunds } from '../lib/stacks';
 
