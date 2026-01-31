@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { ProgressBar } from './ProgressBar';
 import { Clock, Users, ArrowUpRight } from 'lucide-react';
@@ -19,7 +20,7 @@ interface CampaignCardProps {
   campaign: Campaign;
 }
 
-export function CampaignCard({ campaign }: CampaignCardProps) {
+function CampaignCardComponent({ campaign }: CampaignCardProps) {
   const isComplete = campaign.raised >= campaign.goal;
 
   return (
@@ -111,3 +112,6 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
     </Link>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export const CampaignCard = React.memo(CampaignCardComponent);
