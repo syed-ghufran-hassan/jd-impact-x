@@ -36,6 +36,15 @@
 (define-constant ERR_ALREADY_REFUNDED (err u109))
 (define-constant ERR_REFUND_NOT_AVAILABLE (err u110))
 (define-constant ERR_GOAL_ALREADY_MET (err u111))
+(define-constant ERR_CAMPAIGN_CANCELLED (err u112))
+(define-constant ERR_NOT_CANCELLED (err u113))
+
+;; Campaign status constants
+(define-constant STATUS_ACTIVE u0)
+(define-constant STATUS_FUNDED u1)
+(define-constant STATUS_EXPIRED u2)
+(define-constant STATUS_CLAIMED u3)
+(define-constant STATUS_CANCELLED u4)
 
 ;; Platform fee: 5% (500 basis points)
 (define-constant PLATFORM_FEE_BPS u500)
