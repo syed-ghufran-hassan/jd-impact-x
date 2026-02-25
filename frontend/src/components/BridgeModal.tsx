@@ -24,7 +24,6 @@ export function BridgeModal({
   // Ethereum Wallet
   const { isConnected: isEthConnected, address: ethAddress } = useAccount();
   const { connect, connectors } = useConnect();
-  // removed unused disconnect
 
   // Stacks Wallet (Recipient)
   const { connected: isStxConnected, stxAddress, connect: connectStx } = useStacksWallet();
@@ -32,7 +31,7 @@ export function BridgeModal({
   // Bridge Hook
   const { bridge, checkStatus, status, error, txHash, reset } = useBridge();
 
-  // Reset state when modal opens
+  // Reset modal state on open
   useEffect(() => {
     if (isOpen) {
       setAmount(defaultAmount);
@@ -45,31 +44,18 @@ export function BridgeModal({
     };
   }, [isOpen, defaultAmount, reset]);
 
-  // Handle Polling for Mint Status
-  useEffect(() => {
-    if (status === 'polling' && txHash) {
-      // We need the hookData to check status, but it's returned by the bridge function.
-      // In a real app, we might store this in a context or pass it through state.
-      // For now, we'll assume the user waits or we use a simplified polling mechanism 
-      // if we can't persist the hookData easily across re-renders without more state.
-      
-      // Since `bridge()` returns the hookData, we should capture it in the handleBridge function
-      // This effect is mainly for cleanup or recovering state if we persisted it.
-    }
-  }, [status, txHash]);
-
+  // Handle bridging process
   const handleBridge = async () => {
     if (!amount || !isStxConnected || !stxAddress) return;
-    
-    // 1. Execute Bridge Transaction
+
+    // Execute Bridge Transaction
     const result = await bridge(amount, stxAddress);
-    
-    if (result && result.hookData) {
-      // 2. Start Polling for Mint
+    if (result?.hookData) {
       pollForMint(result.hookData);
     }
   };
 
+  // Poll for mint confirmation
   const pollForMint = async (hookData: string) => {
     const MAX_ATTEMPTS = 60; // 10 minutes (10s interval)
     let attempts = 0;
@@ -81,11 +67,10 @@ export function BridgeModal({
       const success = await checkStatus(hookData);
       
       if (success) {
-        if (onSuccess) onSuccess();
+        onSuccess?.();
       } else if (attempts < MAX_ATTEMPTS) {
-        pollTimerRef.current = setTimeout(check, 10000); // Check every 10s
+        pollTimerRef.current = setTimeout(check, 10000);
       } else {
-        // Timeout
         console.warn('Polling timeout');
       }
     };
@@ -94,7 +79,7 @@ export function BridgeModal({
   };
 
   const handleClose = () => {
-    if (status !== 'approving' && status !== 'depositing' && status !== 'polling') {
+    if (!['approving', 'depositing', 'polling'].includes(status)) {
       onClose();
     }
   };
@@ -108,9 +93,10 @@ export function BridgeModal({
         className="absolute inset-0 bg-dark-900/90 backdrop-blur-md"
         onClick={handleClose}
       />
-      
+
       {/* Modal */}
       <div className="glass-card relative max-w-md w-full overflow-hidden animate-in border border-white/10 shadow-2xl">
+        
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-white/10 bg-white/5">
           <h2 className="text-lg font-heading font-semibold text-dark-100 flex items-center gap-2">
@@ -119,7 +105,7 @@ export function BridgeModal({
           </h2>
           <button 
             onClick={handleClose}
-            disabled={status === 'approving' || status === 'depositing'}
+            disabled={['approving', 'depositing'].includes(status)}
             className="p-2 hover:bg-white/5 rounded-lg transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5 text-dark-400" />
@@ -128,25 +114,23 @@ export function BridgeModal({
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          
-          {/* Status: Success */}
+          {/* Status / Polling */}
           {status === 'success' || (status === 'polling' && pollingAttempt > 0) ? (
             <div className="text-center py-6">
               {status === 'success' ? (
-                 <CheckCircle className="w-16 h-16 text-success-400 mx-auto mb-4" />
+                <CheckCircle className="w-16 h-16 text-success-400 mx-auto mb-4" />
               ) : (
-                 <div className="relative w-16 h-16 mx-auto mb-4">
-                   <Loader2 className="w-16 h-16 text-primary-400 animate-spin" />
-                   <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-white">
-                     {pollingAttempt}
-                   </div>
-                 </div>
+                <div className="relative w-16 h-16 mx-auto mb-4">
+                  <Loader2 className="w-16 h-16 text-primary-400 animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-white">
+                    {pollingAttempt}
+                  </div>
+                </div>
               )}
-             
+
               <h3 className="text-lg font-heading font-semibold text-dark-100 mb-2">
                 {status === 'success' ? 'Bridge Complete!' : 'Bridge Initiated'}
               </h3>
-              
               <p className="text-dark-400 mb-6">
                 {status === 'success' 
                   ? 'Your USDCx has been minted on Stacks.' 
@@ -171,9 +155,8 @@ export function BridgeModal({
               )}
             </div>
           ) : (
-            /* Input Form */
             <>
-              {/* Step 1: Connect Wallets */}
+              {/* Wallet Connect */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 rounded-xl bg-dark-800 border border-dark-700">
                   <div className="flex items-center gap-3">
@@ -204,9 +187,9 @@ export function BridgeModal({
                 </div>
 
                 <div className="flex items-center justify-between p-3 rounded-xl bg-dark-800 border border-dark-700">
-                   <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                       <span className="text-purple-400 font-bold text-xs">STX</span>
+                      <span className="text-purple-400 font-bold text-xs">STX</span>
                     </div>
                     <div className="text-left">
                       <div className="text-xs text-dark-400">To (Stacks)</div>
@@ -226,7 +209,7 @@ export function BridgeModal({
                 </div>
               </div>
 
-              {/* Step 2: Amount */}
+              {/* Amount Input */}
               <div>
                 <label className="block text-sm font-medium text-dark-300 mb-2">
                   Amount to Bridge (USDC)
@@ -247,7 +230,6 @@ export function BridgeModal({
                 </div>
               </div>
 
-              {/* Error Message */}
               {error && (
                 <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
                   {error}
@@ -257,7 +239,7 @@ export function BridgeModal({
               {/* Action Button */}
               <button
                 onClick={handleBridge}
-                disabled={!isEthConnected || !isStxConnected || !amount || status !== 'idle' && status !== 'error'}
+                disabled={!isEthConnected || !isStxConnected || !amount || (status !== 'idle' && status !== 'error')}
                 className="w-full btn-primary py-3 flex items-center justify-center gap-2"
               >
                 {status === 'checking' && 'Checking Balance...'}
@@ -270,7 +252,7 @@ export function BridgeModal({
                   </>
                 )}
               </button>
-              
+
               <p className="text-xs text-center text-dark-500">
                 Powered by Circle xReserve. Transfers typically take 15-20 minutes.
               </p>
